@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Feature Layer Sublayers Example</title>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.28/esri/themes/light/main.css">
+    <script src="https://js.arcgis.com/4.28/"></script>
+    <style>
+        html, body, #viewDiv {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+        #layerSelect {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="viewDiv"></div>
+    <select id="layerSelect">
+        <!-- Options will be populated by JavaScript -->
+    </select>
+    <script>
+        require([
+            "esri/Map",
+            "esri/views/MapView",
+            "esri/layers/FeatureLayer",
+            "esri/layers/support/Sublayer"
+        ], function(Map, MapView, FeatureLayer) {
+            var map = new Map({ basemap: "topo-vector" });
+
+            var view = new MapView({
+                container: "viewDiv",
+                map: map,
+                center: [-77.61094, 43.16103], // Adjust as needed
+                zoom: 12
+            });
+
+            var featureLayer = new FeatureLayer({
+				url: "https://services2.arcgis.com/RQcpPaCpMAXzUI5g/arcgis/rest/services/Final06_WFL1/FeatureServer"
+
+            });
+
+            map.add(featureLayer);
+
+            // Once the layer loads, populate the dropdown with sublayers
+            featureLayer.when(function() {
+                featureLayer.sublayers.forEach(function(sublayer, index) {
+                    var option = document.createElement("option");
+                    option.text = sublayer.title || `Layer ${index}`;
+                    option.value = index;
+                    document.getElementById('layerSelect').add(option);
+                });
+            });
+
+            document.getElementById('layerSelect').addEventListener('change', function(event) {
+                var selectedLayerIndex = parseInt(event.target.value, 10);
+
+                featureLayer.sublayers.forEach(function(sublayer, index) {
+                    sublayer.visible = (index === selectedLayerIndex);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
