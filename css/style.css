@@ -1,0 +1,55 @@
+html, body, #viewDiv {
+    padding: 0;
+    margin: 0;
+    height: 100%;
+    width: 100%;
+}
+#controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+}
+#graphControl {
+    position: absolute;
+    top: 10px;
+    left: 50px;
+    z-index: 10;
+    cursor: pointer;
+    padding: 5px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+}
+#graphFrame {
+    position: absolute;
+    left: 50px;
+    top: 60px;
+    width: 80vw;
+    height: auto;
+    z-index: 9;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    display: none;
+}
+#graphFrame img {
+    width: 100%;
+    height: auto;
+}
+#yearDisplay {
+    position: absolute;
+    top: 80px;
+    left: 50px;
+    width: 20vw;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    padding: 10px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    text-align: center;
+}
+#yearDisplay h1 {
+    margin: 0;
+    font-size: 1.5em;
+}
+#yearDisplay h3 {
+    margin-top: -10px;
+}

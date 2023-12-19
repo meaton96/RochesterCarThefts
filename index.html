@@ -2,36 +2,89 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Feature Layer Sublayers Example</title>
+    <title>Motor Vehicle Thefts in Rochester NY 2014-2023</title>
     <link rel="stylesheet" href="https://js.arcgis.com/4.28/esri/themes/light/main.css">
+    <link rel="stylesheet" href="css/style.css">
     <script src="https://js.arcgis.com/4.28/"></script>
-    <style>
-        html, body, #viewDiv {
-            padding: 0;
-            margin: 0;
-            height: 100%;
-            width: 100%;
-        }
-        #layerSelect {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 10;
-        }
-    </style>
+    
 </head>
 <body>
     <div id="viewDiv"></div>
-    <select id="layerSelect">
-        <!-- Options will be populated by JavaScript -->
-    </select>
+    <div id="controls">
+        <select id="yearSelect">
+        </select>
+        <label>
+            <input type="radio" name="layerType" value="dotMap" checked> Dot Map
+        </label>
+        <label>
+            <input type="radio" name="layerType" value="heatmap"> Heatmap
+        </label>
+    </div>
+
+    <div id="graphControl">Toggle Graph</div>
+    <div id="graphFrame">
+        <img src="media/total_thefts_plot.png" alt="Total Thefts Graph">
+    </div>
+
+    <div id="yearDisplay">
+    </div>
+
     <script>
+
+        const yearTheftCounts = [
+            {2011: 729},
+            {2012: 627},
+            {2013: 532},
+            {2014: 552},
+            {2015: 565},
+            {2016: 503},
+            {2017: 487},
+            {2018: 465},
+            {2019: 550},
+            {2020: 799},
+            {2021: 960},
+            {2022: 1114},
+            {2023: 3510}
+
+        ];
+        const meanThefts = yearTheftCounts.slice(0, -1) // Exclude 2023
+        .reduce((acc, obj) => acc + Object.values(obj)[0], 0) / 12;
+
+        function findTheftCount(year) {
+            for (let obj of yearTheftCounts) {
+                if (obj.hasOwnProperty(year)) {
+                    return obj[year];
+                }
+            }
+            return null; // Return null if the year is not found
+        }
+
+        // Update the year display
+        function updateYearDisplay(selectedYearIndex) {
+            var year = 2023 - selectedYearIndex; // Calculate year
+
+            var thefts = findTheftCount(year);
+            var previousYearThefts = selectedYearIndex < 12 ? findTheftCount(year - 1) : null;
+            var percentageIncrease = previousYearThefts ? ((thefts - previousYearThefts) / previousYearThefts * 100).toFixed(2) + '%' : 'N/A';
+            var percentageDiffFromMean = ((thefts - meanThefts) / meanThefts * 100).toFixed(2) + '%';
+
+            var yearDisplay = document.getElementById('yearDisplay');
+            yearDisplay.innerHTML = `<h1>Motor Vehicle Thefts in Rochester NY</h1><h3>Year: ${year}</h3>`;
+            yearDisplay.innerHTML += `<p>Number of thefts: ${thefts}</p>`;
+            yearDisplay.innerHTML += `<p>% Increase from previous year: ${percentageIncrease}</p>`;
+            yearDisplay.innerHTML += `<p>Average thefts per year: ${meanThefts.toFixed(2)}</p>`;
+            yearDisplay.innerHTML += `<p>% Difference from average: ${percentageDiffFromMean}</p>`;
+        }
+
+        window.onload = function() {
+            updateYearDisplay(0);
+        };
         require([
             "esri/Map",
             "esri/views/MapView",
             "esri/layers/FeatureLayer",
-            "esri/layers/support/Sublayer"
-        ], function(Map, MapView, FeatureLayer) {
+            "esri/layers/TileLayer"
+        ], function(Map, MapView, FeatureLayer, TileLayer) {
             var map = new Map({ basemap: "topo-vector" });
 
             var view = new MapView({
@@ -41,31 +94,66 @@
                 zoom: 12
             });
 
-            var featureLayer = new FeatureLayer({
-				url: "https://services2.arcgis.com/RQcpPaCpMAXzUI5g/arcgis/rest/services/Final06_WFL1/FeatureServer"
+            var dotMapLayers = [];
+            var heatmapLayers = [];
+            var baseUrl = "https://services2.arcgis.com/RQcpPaCpMAXzUI5g/arcgis/rest/services/Final06_WFL1/FeatureServer";
+            var heatmapBaseUrl = "https://tiles.arcgis.com/tiles/RQcpPaCpMAXzUI5g/arcgis/rest/services/Final06_WTL";
 
+            // Create dot map and heatmap layers
+            for (var i = 0; i < 10; i++) {
+                var dotLayer = new FeatureLayer({ url: baseUrl + "/" + i });
+                var heatmapLayer = new TileLayer({ url: heatmapBaseUrl + (i + 1) + "/MapServer" });
+                
+                dotMapLayers.push(dotLayer);
+                heatmapLayers.push(heatmapLayer);
+                
+                map.add(dotLayer);
+                map.add(heatmapLayer);
+                
+                dotLayer.visible = (i === 0);
+                heatmapLayer.visible = false;
+
+                var option = document.createElement("option");
+                option.text = `${2023 - i}`;
+                option.value = i;
+                document.getElementById('yearSelect').add(option);
+            }
+            
+            // Update the year display and layer visibility when the year is changed
+            document.getElementById('yearSelect').addEventListener('change', function(event) {
+
+                var selectedYearIndex = parseInt(event.target.value, 10);
+                updateYearDisplay(selectedYearIndex);
+
+
+                updateLayerVisibility(selectedYearIndex);
             });
-
-            map.add(featureLayer);
-
-            // Once the layer loads, populate the dropdown with sublayers
-            featureLayer.when(function() {
-                featureLayer.sublayers.forEach(function(sublayer, index) {
-                    var option = document.createElement("option");
-                    option.text = sublayer.title || `Layer ${index}`;
-                    option.value = index;
-                    document.getElementById('layerSelect').add(option);
+            // Update the layer visibility when the layer type is changed
+            document.querySelectorAll('input[name="layerType"]').forEach(function(radio) {
+                radio.addEventListener('change', function() {
+                    var selectedYearIndex = parseInt(document.getElementById('yearSelect').value, 10);
+                    updateLayerVisibility(selectedYearIndex);
                 });
             });
+            // Update the layer visibility
+            function updateLayerVisibility(selectedYearIndex) {
+                var selectedLayerType = document.querySelector('input[name="layerType"]:checked').value;
 
-            document.getElementById('layerSelect').addEventListener('change', function(event) {
-                var selectedLayerIndex = parseInt(event.target.value, 10);
-
-                featureLayer.sublayers.forEach(function(sublayer, index) {
-                    sublayer.visible = (index === selectedLayerIndex);
+                dotMapLayers.forEach(function(layer, index) {
+                    layer.visible = (index === selectedYearIndex && selectedLayerType === 'dotMap');
                 });
-            });
+
+                heatmapLayers.forEach(function(layer, index) {
+                    layer.visible = (index === selectedYearIndex && selectedLayerType === 'heatmap');
+                });
+            }
         });
+        // Toggle the graph visibility
+        document.getElementById('graphControl').addEventListener('click', function() {
+            var graphFrame = document.getElementById('graphFrame');
+            graphFrame.style.display = graphFrame.style.display === 'none' ? 'block' : 'none';
+        });
+        
     </script>
 </body>
 </html>
